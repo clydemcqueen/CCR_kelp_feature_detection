@@ -56,7 +56,8 @@ class ORB final : public DetectAndCompute
 public:
     ORB()
     {
-        detector_ = cv::ORB::create();
+        // Ask for a huge number of features to get unlimited
+        detector_ = cv::ORB::create(10000000);
     }
 };
 
