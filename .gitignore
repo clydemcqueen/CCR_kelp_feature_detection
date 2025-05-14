@@ -1,5 +1,5 @@
-# Don't upload results during development and testing
-temp_results/
+# Don't upload build products and temp results
+build/
 
 # CLion stuff
 .idea/

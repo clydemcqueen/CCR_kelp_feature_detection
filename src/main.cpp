@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     if (argc != 4)
     {
         std::cout << "Usage: " << argv[0] << " <detector_type> <input_path> <output_path>\n";
-        std::cout << "Possible detectors: SIFT, BRISK, ORB, MSER, AKAZE, FAST, blob, Agast, GFTT, all\n";
+        std::cout << "Possible detectors: SIFT, BRISK, ORB, MSER, AKAZE, FAST, blob, Agast, GFTT, desc, all\n";
         return 1;
     }
 
@@ -78,21 +78,22 @@ int main(int argc, char** argv)
 
     if (!std::filesystem::is_directory(output_dir)) {
         std::cout << "Output path is not a directory: " << output_dir << std::endl;
+        return 1;
     }
 
     std::vector<std::shared_ptr<wrapped::DetectorBase>> detectors = {};
 
     // Feature detectors that can extract descriptors
-    if (detector_type == "SIFT" || detector_type == "all") {
+    if (detector_type == "SIFT" || detector_type == "desc" || detector_type == "all") {
         detectors.push_back(std::make_shared<wrapped::SIFT>());
     }
-    if (detector_type == "BRISK" || detector_type == "all") {
+    if (detector_type == "BRISK" || detector_type == "desc" || detector_type == "all") {
         detectors.push_back(std::make_shared<wrapped::BRISK>());
     }
-    if (detector_type == "ORB" || detector_type == "all") {
+    if (detector_type == "ORB" || detector_type == "desc" || detector_type == "all") {
         detectors.push_back(std::make_shared<wrapped::ORB>());
     }
-    if (detector_type == "AKAZE" || detector_type == "all") {
+    if (detector_type == "AKAZE" || detector_type == "desc" || detector_type == "all") {
         detectors.push_back(std::make_shared<wrapped::AKAZE>());
     }
 
