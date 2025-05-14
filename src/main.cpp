@@ -20,10 +20,17 @@ public:
     {
         // Read and convert to grayscale
         std::cout << "Open " << image_path << std::endl;
-        cv::Mat image = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
+        const cv::Mat image = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
         if (image.empty()) {
             throw std::runtime_error("Failed to load image: " + image_path);
         }
+
+        // Output filenames will start with output_path + image path stem
+        const std::string partial_output_path = output_dir + "/" + std::filesystem::path(image_path).stem().string() + "_";
+
+        // Write per-image stats
+        std::ofstream stats_file(partial_output_path + "stats.csv");
+        stats_file << "detector,keypoints,ms\n";
 
         for (const auto& detector : detectors_) {
             std::cout << "Start " << detector->getName() << std::endl;
@@ -31,21 +38,22 @@ public:
             // Detect features
             std::vector<cv::KeyPoint> keypoints;
             cv::Mat descriptors;
+            auto start = std::chrono::high_resolution_clock::now();
             detector->detectAndCompute(image, keypoints, descriptors);
-            std::cout << "Detected " << keypoints.size() << " features" << std::endl;
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-            // Output filenames will start with output_path + stem + feature_name
-            std::string stem = std::filesystem::path(image_path).stem().string();
-            std::string partial_output_path = output_dir + "/" + stem + "_" + detector->getName();
+            stats_file << detector->getName() << "," << keypoints.size() << "," << duration.count() << "\n";
+
+            const std::string per_detector_output_path = partial_output_path + detector->getName();
 
             // Write features to CSV
-            save_features_to_csv(partial_output_path + "_keypoints.csv", keypoints);
+            save_features_to_csv(per_detector_output_path + "_keypoints.csv", keypoints);
 
             // Draw features
             cv::Mat visualization;
-            cv::drawKeypoints(image, keypoints, visualization, cv::Scalar::all(-1),
-                              cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-            cv::imwrite(partial_output_path + ".jpg", visualization);
+            cv::drawKeypoints(image, keypoints, visualization, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+            cv::imwrite(per_detector_output_path + ".jpg", visualization);
         }
 }
 
@@ -72,9 +80,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::string detector_type = argv[1];
-    std::string input_path = argv[2];
-    std::string output_dir = argv[3];
+    const std::string detector_type = argv[1];
+    const std::string input_path = argv[2];
+    const std::string output_dir = argv[3];
 
     if (!std::filesystem::is_directory(output_dir)) {
         std::cout << "Output path is not a directory: " << output_dir << std::endl;
