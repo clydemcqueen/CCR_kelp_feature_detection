@@ -9,6 +9,11 @@ class DetectorBase
 public:
     virtual ~DetectorBase() = default;
 
+    virtual void detect(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints)
+    {
+        return detector_->detect(image, keypoints);
+    }
+
     virtual void detectAndCompute(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) = 0;
 
     [[nodiscard]] virtual std::string getName() const
@@ -76,7 +81,7 @@ class DetectOnly : public DetectorBase
 public:
     void detectAndCompute (const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat&) override
     {
-        detector_->detect(image, keypoints);
+        detect(image, keypoints);
     }
 };
 

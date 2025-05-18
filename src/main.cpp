@@ -37,9 +37,8 @@ public:
 
             // Detect features
             std::vector<cv::KeyPoint> keypoints;
-            cv::Mat descriptors;
             auto start = std::chrono::high_resolution_clock::now();
-            detector->detectAndCompute(image, keypoints, descriptors);
+            detector->detect(image, keypoints);
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
@@ -48,12 +47,12 @@ public:
             const std::string per_detector_output_path = partial_output_path + detector->getName();
 
             // Write features to CSV
-            save_features_to_csv(per_detector_output_path + "_keypoints.csv", keypoints);
+            // save_features_to_csv(per_detector_output_path + "_keypoints.csv", keypoints);
 
             // Draw features
-            cv::Mat visualization;
-            cv::drawKeypoints(image, keypoints, visualization, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-            cv::imwrite(per_detector_output_path + ".jpg", visualization);
+            // cv::Mat visualization;
+            // cv::drawKeypoints(image, keypoints, visualization, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+            // cv::imwrite(per_detector_output_path + ".jpg", visualization);
         }
 }
 
