@@ -8,8 +8,6 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "detectors.hpp"
-
 struct Responses
 {
     float min{};
@@ -47,7 +45,7 @@ struct Responses
 class FeaturePipeline
 {
 public:
-    explicit FeaturePipeline(std::vector<std::shared_ptr<wrapped::DetectorBase>> detectors) : detectors_(std::move(detectors))
+    explicit FeaturePipeline(std::vector<cv::Ptr<cv::Feature2D>> detectors) : detectors_(std::move(detectors))
     {
     }
 
@@ -68,7 +66,8 @@ public:
         stats_file << "detector,keypoints,r_min,r_max,r_mean,r_stddev,ms\n";
 
         for (const auto& detector : detectors_) {
-            std::cout << "Start " << detector->getName() << std::endl;
+            auto name = detector->getDefaultName().substr(strlen("Feature2D."));
+            std::cout << "Start " << name << std::endl;
 
             // Detect features
             std::vector<cv::KeyPoint> keypoints;
@@ -78,7 +77,7 @@ public:
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
             Responses r(keypoints);
-            stats_file << detector->getName() << ","
+            stats_file << name << ","
                 << keypoints.size() << ","
                 << r.min << ","
                 << r.max << ","
@@ -86,7 +85,7 @@ public:
                 << r.stdev << ","
                 << duration.count() << "\n";
 
-            const std::string per_detector_output_path = partial_output_path + detector->getName();
+            const std::string per_detector_output_path = partial_output_path + name;
 
             // Write features to CSV
             // save_features_to_csv(per_detector_output_path + "_keypoints.csv", keypoints);
@@ -99,7 +98,7 @@ public:
 }
 
 private:
-    std::vector<std::shared_ptr<wrapped::DetectorBase>> detectors_;
+    std::vector<cv::Ptr<cv::Feature2D>> detectors_;
 
     static void save_features_to_csv(const std::string& filepath, const std::vector<cv::KeyPoint>& keypoints)
     {
@@ -130,37 +129,38 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::vector<std::shared_ptr<wrapped::DetectorBase>> detectors = {};
+    std::vector<cv::Ptr<cv::Feature2D>> detectors = {};
 
     // Feature detectors that can extract descriptors
     if (detector_type == "SIFT" || detector_type == "desc" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::SIFT>());
+        detectors.emplace_back(cv::SIFT::create());
     }
     if (detector_type == "BRISK" || detector_type == "desc" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::BRISK>());
+        detectors.emplace_back(cv::BRISK::create());
     }
     if (detector_type == "ORB" || detector_type == "desc" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::ORB>());
+        // Ask for a huge number of features to get unlimited
+        detectors.emplace_back(cv::ORB::create(10000000));
     }
     if (detector_type == "AKAZE" || detector_type == "desc" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::AKAZE>());
+        detectors.emplace_back(cv::AKAZE::create());
     }
 
     // Feature detectors that cannot extract descriptors
     if (detector_type == "MSER" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::MSER>());
+        detectors.emplace_back(cv::MSER::create());
     }
     if (detector_type == "FAST" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::FAST>());
+        detectors.emplace_back(cv::FastFeatureDetector::create());
     }
     if (detector_type == "SimpleBlobDetector" || detector_type == "blob" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::SimpleBlobDetector>());
+        detectors.emplace_back(cv::SimpleBlobDetector::create());
     }
     if (detector_type == "AgastFeatureDetector" || detector_type == "Agast" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::AgastFeatureDetector>());
+        detectors.emplace_back(cv::AgastFeatureDetector::create());
     }
     if (detector_type == "GFTTDetector" || detector_type == "GFTT" || detector_type == "all") {
-        detectors.push_back(std::make_shared<wrapped::GFTTDetector>());
+        detectors.emplace_back(cv::GFTTDetector::create());
     }
 
     if (detectors.empty()){
