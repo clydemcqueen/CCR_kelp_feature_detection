@@ -1,89 +1,160 @@
 # !/usr/bin/env python3
 
+"""
+Read images, run feature detectors, and gather per-detector statistics.
+
+Typical usage is to run this script recursively (-r) on a directory. Statistics will be aggregated at each directory.
+For example, you can structure the images by patch type:
+
+    train
+        BR_encrust
+            BR_encrust_foo.jpg
+            BR_encrust_bar.jpg
+            ...
+            stats.csv -- covers BR_encrust/*.jpg
+        BR_fucus
+            BR_fucus_foo.jpg
+            BR_fucus_bar.jpg
+            ...
+            stats.csv -- covers BR_encrust/*.jpg
+        stats.csv -- covers train/BR_encrust/*.jpg and train/BR_fucus/*.jpg
+"""
+
+import argparse
 import os
 import sys
-from argparse import ArgumentParser
 from pathlib import Path
 
 import cv2
 import numpy as np
 
 
-class Detection:
-    """Results of a single call to detector.detect()"""
+def output_path(input_path: str, suffix: str, ext: str) -> str:
+    """Given foo/fee.fie, return foo/fee_suffix.ext."""
+    path = Path(input_path)
+    return str(path.parent / f"{path.stem}_{suffix}.{ext}")
 
-    def __init__(self, name: str, detector_name: str, keypoints: list):
-        self.name = name                                                    # Name of the image or patch type
+
+class Detection:
+    """Results of a single call to detector.detect()."""
+
+    def __init__(self, path: str, detector_name: str, keypoints: list):
+        self.path = path                                                    # Image path
         self.detector_name = detector_name                                  # Name of the detector
         self.keypoints = keypoints                                          # Keypoints detected
         self.responses: list[float] = [kp.response for kp in keypoints]     # Just the response values
 
     @staticmethod
     def csv_header():
-        return 'name,detector,num_features,r_min,r_max,r_mean,r_std\n'
+        return 'path,detector,num_features,r_min,r_max,r_mean,r_std\n'
 
     def csv_row(self):
-        return f'{self.name},{self.detector_name},{len(self.responses)},{min(self.responses)},{max(self.responses)},{np.mean(self.responses)},{np.std(self.responses)}\n'
+        if len(self.responses) > 0:
+            r_min = min(self.responses)
+            r_max = max(self.responses)
+            r_mean = np.mean(self.responses)
+            r_std = np.std(self.responses)
+            return f'{self.path},{self.detector_name},{len(self.responses)},{r_min},{r_max},{r_mean},{r_std}\n'
+        else:
+            return f'{self.path},{self.detector_name},0,0,0,0,0\n'
 
 
 class FeaturePipeline:
     def __init__(self, detectors):
         self.detectors = detectors
 
-        # Keep track of all detections, organized by detector
-        self.detections_by_detector: dict[str, list[Detection]] = {}
+    def process_directory(self, path: str, recurse: bool, annotate: bool) -> tuple[dict[str, list[cv2.KeyPoint]], list[Detection]]:
+        """
+        Process a directory and its subdirectories and write stats.csv.
 
-    def process_image(self, image_path: str, output_dir: str, annotate: bool):
+        Image stats include the full path:
+        path/to/image.jpg, detector_name, stats...
+
+        Overall directory stats use the special name '**':
+        path/to/this/directory/**, detector_name, stats...
+        """
+
+        # Open the stats.csv file in this directory
+        stats_file = open(os.path.join(path, 'stats.csv'), 'w')
+        stats_file.write(Detection.csv_header())
+
+        # Accumulate keypoints (by detector) so that we can generate summary stats for this directory
+        all_keypoints: dict[str, list[cv2.KeyPoint]] = {}
+        for detector in self.detectors:
+            all_keypoints[detector.__class__.__name__] = []
+
+        # Our subdirectories will send us their summary stats, write them in this directory
+        all_stats: list[Detection] = []
+
+        # Process all images and subdirectories
+        entries = os.scandir(path)
+        for entry in entries:
+
+            if entry.is_file():
+                if entry.name.lower().endswith('.jpg'):
+                    detections = self.process_image(entry.path, annotate)
+
+                    # We have a list of detections, one per detector
+                    for detection in detections:
+                        stats_file.write(detection.csv_row())
+                        all_keypoints[detection.detector_name].extend(detection.keypoints)
+
+            elif entry.is_dir() and recurse:
+                subdir_keypoints, subdir_stats = self.process_directory(entry.path, recurse, annotate)
+
+                # Accumulate keypoints
+                for detector_name, keypoints in subdir_keypoints.items():
+                    all_keypoints[detector_name].extend(keypoints)
+
+                # Write the subdir_stats in this directory
+                for detection in subdir_stats:
+                    stats_file.write(detection.csv_row())
+                    all_stats.append(detection)
+
+        for detector_name, keypoints in all_keypoints.items():
+            # Create stats for our directory with the special file name '**'
+            directory_stats = Detection(os.path.join(path, '**'), detector_name, keypoints)
+            all_stats.append(directory_stats)
+
+            # Don't write them here, let the parent show them
+            # stats_file.write(directory_stats.csv_row())
+
+        # Cascade everything upward
+        return all_keypoints, all_stats
+
+    def process_image(self, image_path: str, annotate: bool) -> list[Detection]:
         print(f'Open {image_path}')
         image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if image is None:
             print(f'Failed to load image: {image_path}')
-            return
-
-        image_name = Path(image_path).stem
-        partial_output_path = os.path.join(output_dir, f'{image_name}_')
+            return []
 
         # Run each detector, collecting results
+        detections: list[Detection] = []
         for detector in self.detectors:
             detector_name = detector.__class__.__name__
-            print(f'Start {detector_name}')
-
-            if detector_name not in self.detections_by_detector:
-                self.detections_by_detector[detector_name] = []
+            # print(f'Start {detector_name}')
 
             keypoints = detector.detect(image, None)
-            self.detections_by_detector[detector_name].append(Detection(image_name, detector_name, keypoints))
+            detections.append(Detection(image_path, detector_name, keypoints))
 
             if annotate:
                 visualization = cv2.drawKeypoints(image, keypoints, None, color=(255,0,0), flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-                cv2.imwrite(f'{partial_output_path}{detector_name}.jpg', visualization)
+                cv2.imwrite(output_path(image_path, f'_{detector_name}', 'jpg'), visualization)
 
-    def write_results(self, output_dir: str):
-        stats_file = open(os.path.join(output_dir, 'stats_by_image.csv'), 'w')
-        stats_file.write(Detection.csv_header())
-
-        for detector_name, detections in self.detections_by_detector.items():
-            combined_keypoints = []  # Collect all keypoints for this detector
-
-            for detection in detections:
-                combined_keypoints.extend(detection.keypoints)
-                stats_file.write(detection.csv_row())
-
-            # Write aggregate stats
-            combined_detection = Detection(f'all', detector_name, combined_keypoints)
-            stats_file.write(combined_detection.csv_row())
+        return detections
 
 
 def main():
-    parser = ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
+    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for images')
     parser.add_argument('-d', '--detector', default='desc', help='detector type, choose from SIFT, BRISK, ORB, MSER, AKAZE, FAST, blob, Agast, GFTT, desc (default), all')
-    parser.add_argument('-a', '--annotate', action='store_true', help='draw features on image')
-    parser.add_argument('input', help='path to image or directory with images')
-    parser.add_argument('output', help='output directory')
+    parser.add_argument('-a', '--annotate', action='store_true', help='draw features on images')
+    parser.add_argument('path', help='a directory with images')
     args = parser.parse_args()
     
-    if not os.path.isdir(args.output):
-        print(f'Output path is not a directory: {args.output}')
+    if not os.path.isdir(args.path):
+        print(f'path must be a directory: {args.path}')
         sys.exit(1)
 
     detectors = []
@@ -94,6 +165,7 @@ def main():
     if args.detector in ['BRISK', 'desc', 'all']:
         detectors.append(cv2.BRISK_create())
     if args.detector in ['ORB', 'desc', 'all']:
+        # Ask ORB for zillions of features to get "all"
         detectors.append(cv2.ORB_create(nfeatures=10000000))
     if args.detector in ['AKAZE', 'desc', 'all']:
         detectors.append(cv2.AKAZE_create())
@@ -115,15 +187,7 @@ def main():
         sys.exit(1)
 
     pipeline = FeaturePipeline(detectors)
-
-    if os.path.isdir(args.input):
-        for entry in os.scandir(args.input):
-            if entry.name.endswith(('.jpg', '.png')):
-                pipeline.process_image(entry.path, args.output, args.annotate)
-    else:
-        pipeline.process_image(args.input, args.output, args.annotate)
-
-    pipeline.write_results(args.output)
+    pipeline.process_directory(args.path, args.recurse, args.annotate)
 
 
 if __name__ == '__main__':
