@@ -1,0 +1,4 @@
+matplotlib~=3.5.1
+numpy~=1.26.3
+pandas~=2.0.1
+opencv-python==4.5.4.60  # Let's stick with 4.5.4 for now
