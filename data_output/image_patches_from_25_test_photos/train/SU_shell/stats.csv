@@ -1,0 +1,17 @@
+path,detector,num_features,r_min,r_max,r_mean,r_std
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_f42da965-3fba-47b7-90e6-72c31bdfdabe.jpg,SIFT,44,0.01378706842660904,0.04566759988665581,0.02324207603338767,0.006655445634815323
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_f42da965-3fba-47b7-90e6-72c31bdfdabe.jpg,BRISK,10,31.22499656677246,44.66798782348633,39.81655979156494,3.7537462747966686
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_f42da965-3fba-47b7-90e6-72c31bdfdabe.jpg,ORB,52,-9.97947427094914e-06,2.928520734712947e-05,7.800747425243606e-06,6.139376577582918e-06
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_f42da965-3fba-47b7-90e6-72c31bdfdabe.jpg,AKAZE,11,0.0010370672680437565,0.0033020894043147564,0.0018459752794693816,0.0007480970613464762
+data_output/image_patches_from_25_test_photos/train/SU_shell/NULL.jpg,SIFT,0,0,0,0,0
+data_output/image_patches_from_25_test_photos/train/SU_shell/NULL.jpg,BRISK,0,0,0,0,0
+data_output/image_patches_from_25_test_photos/train/SU_shell/NULL.jpg,ORB,0,0,0,0,0
+data_output/image_patches_from_25_test_photos/train/SU_shell/NULL.jpg,AKAZE,0,0,0,0,0
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_4539cadf-4297-47e8-8cb8-334eaae721fe.jpg,SIFT,66,0.01375528797507286,0.05200996994972229,0.02359459021439155,0.008653658283661872
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_4539cadf-4297-47e8-8cb8-334eaae721fe.jpg,BRISK,36,30.666667938232422,54.005950927734375,39.844349172380234,7.044055351810662
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_4539cadf-4297-47e8-8cb8-334eaae721fe.jpg,ORB,131,8.960227546594979e-07,5.797813355457038e-05,1.256255294944079e-05,1.0683731129783209e-05
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_4539cadf-4297-47e8-8cb8-334eaae721fe.jpg,AKAZE,36,0.001022040145471692,0.0032389028929173946,0.0016676179851250101,0.0005657213784508089
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_8034a8d0-3589-4e8d-af7e-99421bafd5f1.jpg,SIFT,225,0.01335090771317482,0.06381353735923767,0.02045948039740324,0.008420553744312121
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_8034a8d0-3589-4e8d-af7e-99421bafd5f1.jpg,BRISK,73,30.003578186035156,122.77279663085938,45.631216284346905,19.086269642532123
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_8034a8d0-3589-4e8d-af7e-99421bafd5f1.jpg,ORB,311,6.478436489487649e-07,0.000540730485226959,3.214429001551761e-05,6.545766278385882e-05
+data_output/image_patches_from_25_test_photos/train/SU_shell/SU_shell_8034a8d0-3589-4e8d-af7e-99421bafd5f1.jpg,AKAZE,57,0.0010245705489069223,0.02038985677063465,0.002871663793676386,0.003379954947960164
