@@ -1,7 +1,7 @@
 # CCR_kelp_feature_detection
 This repo is intended to aggregate information regarding the testing of various feature detectors upon temperate, kelp forest benthic imagery.
 
-A folder with 25 photos that exhibit a range of substrate and vegetation conditions for feature detector testing can be found [here](https://github.com/zhrandell/CCR_kelp_feature_detection/tree/main/photos). To provide a more robust testing scenario, we've including the following files for all 25 images (not that for a subset of the .GPR and .TIFF photos, we await the return of a staff member who is OOO and who has the original .GPRs locked in their Adobe account; all edited .JPEGs are present). 
+A folder with 25 photos that exhibit a range of substrate and vegetation conditions for feature detector testing can be found [here](https://github.com/zhrandell/CCR_kelp_feature_detection/tree/main/photos). To provide a more robust testing scenario, we've including the following files for all 25 images. 
 
 - [unedited_GPR](https://github.com/Seattle-Aquarium/CCR_kelp_feature_detection/tree/main/photos/unedited_GPR) -- the "raw" photo file taken by GoPro; .GPR is a proprietary file type that we cannot write, but we can view and edit these files in Adobe Lightroom; maximum sensor information retained.
 - [unedited_TIFF](https://github.com/Seattle-Aquarium/CCR_kelp_feature_detection/tree/main/photos/unedited_TIFF) -- we converted the .GPR to .TIFF to provide an unedited file format that retains much (but not all) of the original sensor information contained within the .GPR file. 
