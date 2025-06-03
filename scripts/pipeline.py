@@ -18,7 +18,13 @@ For example, you can structure the images by patch type:
             ...
             stats.csv -- covers BR_encrust/*.jpg
         stats.csv -- covers train/BR_encrust/*.jpg and train/BR_fucus/*.jpg
+
+Re-run this script on these directories to generate stats.csv for all images and patches:
+python scripts/pipeline.py -d desc -r photos/edited_JPEG/
+python scripts/pipeline.py -d desc -r data_output/image_patches_from_25_test_photos/train/
+
 """
+from __future__ import annotations
 
 import argparse
 import os
@@ -35,35 +41,77 @@ def output_path(input_path: str, suffix: str, ext: str) -> str:
     return str(path.parent / f"{path.stem}_{suffix}.{ext}")
 
 
+def csv_header():
+    """
+    Columns:
+        path            File path, ** indicates this is a directory
+        detector        Name of the detector
+        d_num           Number of detections (individual files processed)
+        f_mean          Mean number of features per detection
+        r_min           Minimum response value
+        r_max           Maximum response value
+        r_mean          Mean response value
+        r_std           Standard deviation of response values
+    """
+    return 'path,detector,d_num,f_mean,r_min,r_max,r_mean,r_std\n'
+
+
 class Detection:
     """Results of a single call to detector.detect()."""
 
-    def __init__(self, path: str, detector_name: str, keypoints: list):
-        self.path = path                                                    # Image path
-        self.detector_name = detector_name                                  # Name of the detector
-        self.keypoints = keypoints                                          # Keypoints detected
-        self.responses: list[float] = [kp.response for kp in keypoints]     # Just the response values
-
-    @staticmethod
-    def csv_header():
-        return 'path,detector,num_features,r_min,r_max,r_mean,r_std\n'
+    def __init__(self, path: str, detector_name: str, responses: list[float]):
+        self.path = path                            # Image path
+        self.detector_name = detector_name          # Name of the detector
+        self.responses = responses                  # The keypoint response values
 
     def csv_row(self):
         if len(self.responses) > 0:
+            d_num = 1
+            f_mean = len(self.responses)
             r_min = min(self.responses)
             r_max = max(self.responses)
             r_mean = np.mean(self.responses)
             r_std = np.std(self.responses)
-            return f'{self.path},{self.detector_name},{len(self.responses)},{r_min},{r_max},{r_mean},{r_std}\n'
+            return f'{self.path},{self.detector_name},{d_num},{f_mean},{r_min},{r_max},{r_mean},{r_std}\n'
         else:
-            return f'{self.path},{self.detector_name},0,0,0,0,0\n'
+            return f'{self.path},{self.detector_name},0,0,0,0,0,0\n'
+
+
+class DetectionList:
+    """A list of detections from one detector."""
+
+    def __init__(self, path: str, detector_name: str):
+        self.path = os.path.join(path, '**')  # Special file name '**'
+        self.detector_name = detector_name
+        self.responses = []
+        self.num_detections = 0
+
+    def add(self, detection: Detection | DetectionList):
+        assert detection.detector_name == self.detector_name
+        self.responses.extend(detection.responses)
+        if isinstance(detection, DetectionList):
+            self.num_detections += detection.num_detections
+        else:
+            self.num_detections += 1
+
+    def csv_row(self):
+        if self.num_detections > 0:
+            d_num = self.num_detections
+            f_mean = len(self.responses)/self.num_detections
+            r_min = min(self.responses)
+            r_max = max(self.responses)
+            r_mean = np.mean(self.responses)
+            r_std = np.std(self.responses)
+            return f'{self.path},{self.detector_name},{d_num},{f_mean},{r_min},{r_max},{r_mean},{r_std}\n'
+        else:
+            return f'{self.path},{self.detector_name},0,0,0,0,0,0\n'
 
 
 class FeaturePipeline:
     def __init__(self, detectors):
         self.detectors = detectors
 
-    def process_directory(self, path: str, recurse: bool, annotate: bool) -> tuple[dict[str, list[cv2.KeyPoint]], list[Detection]]:
+    def process_directory(self, path: str, recurse: bool, annotate: bool) -> dict[str, DetectionList]:
         """
         Process a directory and its subdirectories and write stats.csv.
 
@@ -76,15 +124,12 @@ class FeaturePipeline:
 
         # Open the stats.csv file in this directory
         stats_file = open(os.path.join(path, 'stats.csv'), 'w')
-        stats_file.write(Detection.csv_header())
+        stats_file.write(csv_header())
 
-        # Accumulate keypoints (by detector) so that we can generate summary stats for this directory
-        all_keypoints: dict[str, list[cv2.KeyPoint]] = {}
+        # Accumulate responses (by detector) so that we can generate summary stats for this directory
+        detection_lists: dict[str, DetectionList] = {}
         for detector in self.detectors:
-            all_keypoints[detector.__class__.__name__] = []
-
-        # Our subdirectories will send us their summary stats, write them in this directory
-        all_stats: list[Detection] = []
+            detection_lists[detector.__class__.__name__] = DetectionList(path, detector.__class__.__name__)
 
         # Process all images and subdirectories
         entries = os.scandir(path)
@@ -97,30 +142,19 @@ class FeaturePipeline:
                     # We have a list of detections, one per detector
                     for detection in detections:
                         stats_file.write(detection.csv_row())
-                        all_keypoints[detection.detector_name].extend(detection.keypoints)
+                        detection_lists[detection.detector_name].add(detection)
 
             elif entry.is_dir() and recurse:
-                subdir_keypoints, subdir_stats = self.process_directory(entry.path, recurse, annotate)
+                subdir_detection_lists = self.process_directory(entry.path, recurse, annotate)
 
-                # Accumulate keypoints
-                for detector_name, keypoints in subdir_keypoints.items():
-                    all_keypoints[detector_name].extend(keypoints)
+                for detector_name, detection_list in subdir_detection_lists.items():
+                    detection_lists[detector_name].add(detection_list)
 
-                # Write the subdir_stats in this directory
-                for detection in subdir_stats:
-                    stats_file.write(detection.csv_row())
-                    all_stats.append(detection)
-
-        for detector_name, keypoints in all_keypoints.items():
-            # Create stats for our directory with the special file name '**'
-            directory_stats = Detection(os.path.join(path, '**'), detector_name, keypoints)
-            all_stats.append(directory_stats)
-
-            # Don't write them here, let the parent show them
-            # stats_file.write(directory_stats.csv_row())
+        for detector_name, detection_list in detection_lists.items():
+            stats_file.write(detection_list.csv_row())
 
         # Cascade everything upward
-        return all_keypoints, all_stats
+        return detection_lists
 
     def process_image(self, image_path: str, annotate: bool) -> list[Detection]:
         print(f'Open {image_path}')
@@ -136,7 +170,7 @@ class FeaturePipeline:
             # print(f'Start {detector_name}')
 
             keypoints = detector.detect(image, None)
-            detections.append(Detection(image_path, detector_name, keypoints))
+            detections.append(Detection(image_path, detector_name, [kp.response for kp in keypoints]))
 
             if annotate:
                 visualization = cv2.drawKeypoints(image, keypoints, None, color=(255,0,0), flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
