@@ -1,5 +1,13 @@
 # CCR_kelp_feature_detection
-This repo is intended to aggregate information regarding the testing of various feature detectors upon temperate, kelp forest benthic imagery.
+
+## Overview
+This repo is intended to aggregate information regarding the testing of various feature detectors upon temperate, kelp forest benthic imagery. 
+Preliminary evidence suggests that the feature detectors used in photogrammetry methods struggle with the dark and homogenous nature of kelp and other algae. 
+Accordingly, our team is unaware of photogrammetry models being successfully developed from kelp forest imagery (though if anyone is aware of them, please share at https://github.com/Seattle-Aquarium/CCR_kelp_feature_detection/issues/8!
+The purpose of this repo is to enable targeted testing of various feature detectors against kelp forest (and other algae) imagery, in the hope that future photogrammetry efforts may be succesfully deployed within kelp forests. 
+
+Note that a second issue exists re: photogrammetry and kelp -- the movement of vegetation (due to surge, current, etc.) may break the underlying assumptions of a static environment that these photogrammetry models rely on. 
+This is very likely a larger issue, and one which we are not focused on here. 
 
 A folder with 25 photos that exhibit a range of substrate and vegetation conditions for feature detector testing can be found [here](https://github.com/zhrandell/CCR_kelp_feature_detection/tree/main/photos). To provide a more robust testing scenario, we've including the following files for all 25 images. 
 
