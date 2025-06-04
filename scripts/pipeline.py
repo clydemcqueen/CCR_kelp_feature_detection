@@ -34,6 +34,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from util import get_detectors
+
 
 def output_path(input_path: str, suffix: str, ext: str) -> str:
     """Given foo/fee.fie, return foo/fee_suffix.ext."""
@@ -191,31 +193,7 @@ def main():
         print(f'path must be a directory: {args.path}')
         sys.exit(1)
 
-    detectors = []
-
-    # Feature detectors that can extract descriptors
-    if args.detector in ['SIFT', 'desc', 'all']:
-        detectors.append(cv2.SIFT_create())
-    if args.detector in ['BRISK', 'desc', 'all']:
-        detectors.append(cv2.BRISK_create())
-    if args.detector in ['ORB', 'desc', 'all']:
-        # Ask ORB for zillions of features to get "all"
-        detectors.append(cv2.ORB_create(nfeatures=10000000))
-    if args.detector in ['AKAZE', 'desc', 'all']:
-        detectors.append(cv2.AKAZE_create())
-
-    # Feature detectors that cannot extract descriptors
-    if args.detector in ['MSER', 'all']:
-        detectors.append(cv2.MSER_create())
-    if args.detector in ['FAST', 'all']:
-        detectors.append(cv2.FastFeatureDetector_create())
-    if args.detector in ['SimpleBlobDetector', 'blob', 'all']:
-        detectors.append(cv2.SimpleBlobDetector_create())
-    if args.detector in ['AgastFeatureDetector', 'Agast', 'all']:
-        detectors.append(cv2.AgastFeatureDetector_create())
-    if args.detector in ['GFTTDetector', 'GFTT', 'all']:
-        detectors.append(cv2.GFTTDetector_create())
-
+    detectors = get_detectors(args.detector)
     if not detectors:
         print(f'Unknown detector: {args.detector}')
         sys.exit(1)
